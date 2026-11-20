@@ -1,0 +1,17 @@
+{
+  "name": "Прогулки с собакой",
+  "short_name": "Прогулки",
+  "description": "Трекер прогулок: расстояние, скорость, этажи и дневная норма",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f1e7",
+  "theme_color": "#4b5a35",
+  "lang": "ru",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

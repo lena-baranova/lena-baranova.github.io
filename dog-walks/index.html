@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Прогулки</title>
+<meta name="description" content="Трекер прогулок с собакой: расстояние, скорость, этажи и дневная норма">
+<meta name="theme-color" content="#4b5a35">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Прогулки">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+:root{
+  --swamp-900:#2c3520;
+  --swamp-800:#38432a;
+  --swamp-700:#4b5a35;
+  --swamp-500:#6d7f4c;
+  --swamp-300:#a9b78a;
+  --swamp-100:#e6ebd9;
+  --pink-600:#d9577f;
+  --pink-500:#ec7ea0;
+  --pink-300:#f6b8cb;
+  --pink-100:#fde6ee;
+  --bg:#f3f1e7;
+  --card:#ffffff;
+  --text:#25291c;
+  --muted:#6b705d;
+  --line:#dcdcc9;
+  --danger:#b8423c;
+  --radius:20px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+  font-size:16px;line-height:1.4;
+  padding-bottom:calc(84px + env(safe-area-inset-bottom));
+}
+header{
+  background:var(--swamp-700);color:#fff;
+  padding:calc(14px + env(safe-area-inset-top)) 16px 18px;
+  border-radius:0 0 28px 28px;
+}
+header .row{display:flex;align-items:center;gap:12px}
+header h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.2px}
+header .sub{font-size:14px;color:var(--swamp-100);opacity:.9}
+.paw{width:42px;height:42px;border-radius:50%;background:var(--pink-500);display:grid;place-items:center;flex:none}
+.paw svg{width:24px;height:24px;fill:#fff}
+main{padding:16px;max-width:560px;margin:0 auto}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 1px 0 rgba(0,0,0,.04),0 4px 14px rgba(60,70,40,.07)}
+.card h2{font-size:15px;margin:0 0 10px;color:var(--swamp-700);text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+.muted{color:var(--muted);font-size:14px}
+.small{font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat{background:var(--swamp-100);border-radius:14px;padding:10px 12px}
+.stat .v{font-size:26px;font-weight:700;color:var(--swamp-900);font-variant-numeric:tabular-nums}
+.stat .v small{font-size:14px;font-weight:600;color:var(--muted);margin-left:2px}
+.stat .l{font-size:13px;color:var(--muted)}
+.stat.pink{background:var(--pink-100)}
+.stat.pink .v{color:var(--pink-600)}
+.btn{
+  appearance:none;border:0;border-radius:16px;font:inherit;font-weight:700;
+  padding:14px 18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px
+}
+.btn-big{width:100%;font-size:20px;padding:20px;border-radius:22px}
+.btn-start{background:var(--pink-500);color:#fff;box-shadow:0 6px 18px rgba(236,126,160,.45)}
+.btn-start:active{background:var(--pink-600)}
+.btn-stop{background:var(--swamp-800);color:#fff}
+.btn-ghost{background:var(--swamp-100);color:var(--swamp-800)}
+.btn-pink{background:var(--pink-100);color:var(--pink-600)}
+.btn-danger{background:#f7e1df;color:var(--danger)}
+.btn-sm{padding:8px 12px;font-size:14px;border-radius:12px}
+.row{display:flex;gap:10px;align-items:center}
+.row.wrap{flex-wrap:wrap}
+.grow{flex:1}
+.live{display:none}
+.walking .live{display:block}
+.walking .idle{display:none}
+.gps{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:4px 10px;border-radius:999px;background:var(--swamp-100);color:var(--swamp-800)}
+.dot{width:8px;height:8px;border-radius:50%;background:#bbb}
+.dot.ok{background:#4caf50}.dot.weak{background:#e6a23c}.dot.bad{background:var(--danger)}
+.timer{font-size:52px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;color:var(--swamp-900);margin:4px 0 10px;letter-spacing:-1px}
+/* norm scale */
+.scale{position:relative;height:22px;border-radius:999px;overflow:hidden;display:flex;background:var(--swamp-100)}
+.scale .z{height:100%}
+.z-low{background:var(--pink-100)}
+.z-ok{background:var(--swamp-300)}
+.z-high{background:#f0d9a8}
+.scale-wrap{position:relative;margin:26px 0 6px}
+.marker{position:absolute;top:-24px;transform:translateX(-50%);font-size:12px;font-weight:700;white-space:nowrap;color:var(--pink-600)}
+.marker::after{content:"";position:absolute;left:50%;top:18px;transform:translateX(-50%);width:4px;height:30px;border-radius:2px;background:var(--pink-600)}
+.scale-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:6px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.verdict{margin-top:10px;font-weight:600}
+.walk-dots{display:flex;gap:6px;margin-top:4px}
+.walk-dots span{width:14px;height:14px;border-radius:50%;background:var(--swamp-100);border:2px solid var(--swamp-300)}
+.walk-dots span.on{background:var(--pink-500);border-color:var(--pink-500)}
+/* history */
+.walk{border-top:1px solid var(--line);padding:12px 0}
+.walk:first-of-type{border-top:0}
+.walk .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.walk .when{font-weight:700}
+.walk .meta{font-size:14px;color:var(--muted);margin-top:2px}
+.walk .acts{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.stepper{display:inline-flex;align-items:center;background:var(--swamp-100);border-radius:12px;overflow:hidden}
+.stepper button{border:0;background:transparent;font:inherit;font-weight:800;font-size:18px;width:36px;height:34px;color:var(--swamp-800);cursor:pointer}
+.stepper span{min-width:70px;text-align:center;font-size:14px;font-weight:600}
+.day-h{font-size:13px;font-weight:700;color:var(--swamp-500);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 4px}
+.route{width:100%;height:auto;max-height:180px;background:var(--swamp-100);border-radius:12px;margin-top:8px;display:block}
+/* chart */
+.chart{display:flex;align-items:flex-end;gap:8px;height:130px;position:relative;margin-top:10px;padding-top:6px}
+.chart .bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.chart .bar i{display:block;width:100%;border-radius:8px 8px 4px 4px;background:var(--swamp-500);min-height:3px}
+.chart .bar.today i{background:var(--pink-500)}
+.chart .bar b{font-size:11px;color:var(--muted);font-weight:600;margin-top:4px}
+.chart .bar em{font-style:normal;font-size:11px;color:var(--swamp-800);font-weight:700;margin-bottom:2px}
+.goal-line{position:absolute;left:0;right:0;border-top:2px dashed var(--pink-500)}
+.goal-line span{position:absolute;right:0;top:-18px;font-size:11px;color:var(--pink-600);font-weight:700;background:var(--card);padding:0 4px}
+/* forms */
+label.f{display:block;margin-bottom:12px}
+label.f > span{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
+input[type=number],input[type=text],input[type=date],input[type=time]{
+  width:100%;font:inherit;font-size:17px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--text)
+}
+input:focus{outline:none;border-color:var(--pink-500)}
+.check{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+.check input{width:22px;height:22px;accent-color:var(--pink-500)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.note{background:var(--pink-100);border-radius:14px;padding:12px;font-size:14px;color:#6d3046}
+.tip{background:var(--swamp-100);border-radius:14px;padding:12px;font-size:14px;color:var(--swamp-900)}
+/* nav */
+nav{
+  position:fixed;left:0;right:0;bottom:0;background:var(--swamp-900);
+  display:flex;justify-content:space-around;padding:8px 8px calc(8px + env(safe-area-inset-bottom));z-index:10
+}
+nav button{flex:1;border:0;background:transparent;color:var(--swamp-300);font:inherit;font-size:12px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border-radius:12px;cursor:pointer}
+nav button svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--pink-300)}
+.view{display:none}.view.on{display:block}
+dialog{border:0;border-radius:22px;padding:18px;width:min(92vw,420px);background:var(--card);color:var(--text)}
+dialog::backdrop{background:rgba(30,35,20,.5)}
+dialog h3{margin:0 0 12px;color:var(--swamp-800)}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--swamp-900);color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;max-width:90vw;text-align:center}
+.toast.on{opacity:1}
+.empty{text-align:center;color:var(--muted);padding:20px 0}
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <div class="paw" aria-hidden="true"><svg viewBox="0 0 24 24"><ellipse cx="6" cy="9" rx="2.2" ry="2.8"/><ellipse cx="10" cy="5.5" rx="2.2" ry="2.8"/><ellipse cx="14.5" cy="5.5" rx="2.2" ry="2.8"/><ellipse cx="18.5" cy="9" rx="2.2" ry="2.8"/><path d="M12 11c-3.3 0-6.5 4.4-6.5 7 0 1.9 1.6 2.8 3.4 2.4 1.2-.3 2-.9 3.1-.9s1.9.6 3.1.9c1.8.4 3.4-.5 3.4-2.4 0-2.6-3.2-7-6.5-7z"/></svg></div>
+    <div>
+      <h1 id="hdrTitle">Прогулки</h1>
+      <div class="sub" id="hdrSub"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- WALK -->
+  <section class="view on" id="v-walk">
+    <div class="card" id="walkCard">
+      <div class="idle">
+        <button class="btn btn-big btn-start" id="btnStart">Начать прогулку</button>
+        <p class="muted small" style="margin:10px 2px 0">Во время прогулки держите экран телефона включённым: iPhone не даёт сайтам считать GPS, когда экран заблокирован. Приложение само попросит экран не гаснуть.</p>
+      </div>
+      <div class="live">
+        <div class="row" style="justify-content:space-between">
+          <span class="gps"><span class="dot" id="gpsDot"></span><span id="gpsText">Ищу GPS…</span></span>
+          <span class="muted small" id="wakeText"></span>
+        </div>
+        <div class="timer" id="liveTime">0:00</div>
+        <div class="stats">
+          <div class="stat"><div class="v" id="liveDist">0<small>м</small></div><div class="l">пройдено</div></div>
+          <div class="stat pink"><div class="v" id="liveSpeed">0<small>км/ч</small></div><div class="l">средняя скорость</div></div>
+        </div>
+        <div style="height:14px"></div>
+        <button class="btn btn-big btn-stop" id="btnStop">Закончить прогулку</button>
+        <div class="row" style="margin-top:10px">
+          <button class="btn btn-sm btn-danger grow" id="btnCancel">Отменить без сохранения</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Сегодня</h2>
+      <div class="stats">
+        <div class="stat"><div class="v" id="tDist">0<small>км</small></div><div class="l">пройдено</div></div>
+        <div class="stat"><div class="v" id="tTime">0<small>мин</small></div><div class="l">в пути</div></div>
+        <div class="stat pink"><div class="v" id="tSpeed">–<small>км/ч</small></div><div class="l">средняя скорость</div></div>
+        <div class="stat pink"><div class="v" id="tFloors">0<small>эт.</small></div><div class="l">этажей наверх</div></div>
+      </div>
+      <div class="row" style="margin-top:12px;justify-content:space-between">
+        <span class="muted small">Прогулок сегодня</span>
+        <div class="walk-dots" id="tDots"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Норма на день</h2>
+      <div class="scale-wrap">
+        <div class="marker" id="nMarker">0 км</div>
+        <div class="scale" id="nScale"></div>
+      </div>
+      <div class="scale-labels" id="nLabels"></div>
+      <div class="legend">
+        <span><i style="background:var(--pink-100)"></i>маловато</span>
+        <span><i style="background:var(--swamp-300)"></i>норма</span>
+        <span><i style="background:#f0d9a8"></i>многовато для возраста</span>
+      </div>
+      <div class="verdict" id="nVerdict"></div>
+      <p class="muted small" id="nExplain" style="margin:8px 0 0"></p>
+    </div>
+
+    <div class="card">
+      <h2>Последние 7 дней</h2>
+      <div class="chart" id="chart"></div>
+      <p class="muted small" id="weekSum" style="margin:10px 0 0"></p>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section class="view" id="v-hist">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Все прогулки</h2>
+        <button class="btn btn-sm btn-pink" id="btnAdd">+ Добавить вручную</button>
+      </div>
+      <p class="muted small" style="margin:8px 0 0">Этажи можно поправить кнопками − и + у каждой прогулки.</p>
+      <div id="histList"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="view" id="v-set">
+    <div class="card">
+      <h2>Собака</h2>
+      <label class="f"><span>Кличка</span><input type="text" id="sName" placeholder="Например, Бобик"></label>
+      <div class="grid2">
+        <label class="f"><span>Вес, кг</span><input type="number" id="sWeight" inputmode="decimal" min="1" max="100" step="0.5"></label>
+        <label class="f"><span>Возраст, лет</span><input type="number" id="sAge" inputmode="decimal" min="0" max="25" step="0.5"></label>
+      </div>
+      <label class="check"><input type="checkbox" id="sOver"> Есть лишний вес</label>
+      <label class="f"><span>Этажей за одну прогулку (по умолчанию)</span><input type="number" id="sFloors" inputmode="numeric" min="0" max="50" step="1"></label>
+      <label class="f"><span>Своя цель на день, км (оставьте пустым, чтобы считать автоматически)</span><input type="number" id="sGoal" inputmode="decimal" min="0.5" max="20" step="0.1" placeholder="авто"></label>
+      <button class="btn btn-ghost" id="btnSave" style="width:100%">Сохранить</button>
+    </div>
+
+    <div class="card">
+      <h2>Как считается норма</h2>
+      <div id="normInfo" class="small"></div>
+      <div class="note" style="margin-top:12px">Это ориентир по общим рекомендациям для пожилых собак, а не совет ветеринара. Если у собаки болят суставы, есть проблемы с сердцем или дыханием, нагрузку лучше обсудить с врачом.</div>
+    </div>
+
+    <div class="card">
+      <h2>Копия данных</h2>
+      <p class="muted small" style="margin-top:0">Все прогулки хранятся только на этом телефоне. Иногда сохраняйте копию, чтобы не потерять историю при смене телефона.</p>
+      <div class="row wrap">
+        <button class="btn btn-sm btn-ghost" id="btnExport">Сохранить копию</button>
+        <label class="btn btn-sm btn-ghost" style="margin:0">Загрузить копию<input type="file" id="fileImport" accept="application/json,.json" hidden></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Подсказки</h2>
+      <div class="tip">
+        <b>Экран.</b> Во время прогулки не блокируйте телефон: iPhone останавливает GPS у сайтов при выключенном экране. Можно убавить яркость.<br><br>
+        <b>Этажи.</b> Сайты на iPhone не видят барометр, поэтому к каждой прогулке автоматически прибавляется подъём на 4-й этаж. Если поднимались на лифте или несли собаку на руках, поправьте в «Истории».<br><br>
+        <b>Точность.</b> GPS ошибается на 5–15 метров, особенно между домами. Приложение отбрасывает явные скачки.
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button class="on" data-v="walk"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Прогулка</button>
+  <button data-v="hist"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>История</button>
+  <button data-v="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Собака</button>
+</nav>
+
+<dialog id="dlgAdd">
+  <form method="dialog" id="formAdd">
+    <h3>Добавить прогулку</h3>
+    <div class="grid2">
+      <label class="f"><span>Дата</span><input type="date" id="aDate" required></label>
+      <label class="f"><span>Начало</span><input type="time" id="aTime" required></label>
+      <label class="f"><span>Минут</span><input type="number" id="aMin" inputmode="numeric" min="1" max="600" required></label>
+      <label class="f"><span>Км</span><input type="number" id="aKm" inputmode="decimal" min="0" max="50" step="0.01" required></label>
+    </div>
+    <label class="f"><span>Этажей</span><input type="number" id="aFloors" inputmode="numeric" min="0" max="50"></label>
+    <div class="row">
+      <button class="btn btn-ghost grow" value="cancel" formnovalidate>Отмена</button>
+      <button class="btn btn-start grow" value="ok" id="aOk">Добавить</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgConfirm">
+  <h3 id="cText">Удалить?</h3>
+  <div class="row">
+    <button class="btn btn-ghost grow" id="cNo">Нет</button>
+    <button class="btn btn-danger grow" id="cYes">Да</button>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const KEY = 'dogwalks.v1';
+const ACTIVE = 'dogwalks.active.v1';
+
+/* ---------- storage ---------- */
+function load(){
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(KEY)); } catch(e) {}
+  if (!d || typeof d !== 'object') d = {};
+  d.settings = Object.assign({name:'', weight:15, age:12, overweight:true, floors:4, goalKm:null}, d.settings || {});
+  d.walks = Array.isArray(d.walks) ? d.walks : [];
+  return d;
+}
+let data = load();
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(data)); }
+  catch(e){ toast('Не получилось сохранить: память браузера недоступна'); }
+}
+function loadActive(){ try { return JSON.parse(localStorage.getItem(ACTIVE)); } catch(e){ return null; } }
+function saveActive(a){ try { a ? localStorage.setItem(ACTIVE, JSON.stringify(a)) : localStorage.removeItem(ACTIVE); } catch(e){} }
+
+/* ---------- helpers ---------- */
+const fmtKm = m => (m/1000).toLocaleString('ru-RU',{minimumFractionDigits: m<10000?2:1, maximumFractionDigits: m<10000?2:1});
+function distHuman(m){ return m < 1000 ? `${Math.round(m)}<small>м</small>` : `${fmtKm(m)}<small>км</small>`; }
+function distText(m){ return m < 1000 ? `${Math.round(m)} м` : `${fmtKm(m)} км`; }
+function speedKmh(m, s){ return s > 0 ? (m/1000)/(s/3600) : 0; }
+const fmt1 = v => v.toLocaleString('ru-RU',{minimumFractionDigits:1,maximumFractionDigits:1});
+function dur(s){
+  s = Math.max(0, Math.round(s));
+  const h = Math.floor(s/3600), m = Math.floor(s%3600/60), sec = s%60;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` : `${m}:${String(sec).padStart(2,'0')}`;
+}
+function durWords(s){
+  const m = Math.round(s/60);
+  if (m < 60) return `${m} мин`;
+  return `${Math.floor(m/60)} ч ${m%60} мин`;
+}
+function dayKey(t){ const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function timeHM(t){ return new Date(t).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); }
+function dayTitle(t){
+  const k = dayKey(t), today = dayKey(Date.now()), y = dayKey(Date.now()-864e5);
+  if (k === today) return 'Сегодня';
+  if (k === y) return 'Вчера';
+  return new Date(t).toLocaleDateString('ru-RU',{weekday:'long', day:'numeric', month:'long'});
+}
+function haversine(a, b){
+  const R = 6371000, toR = Math.PI/180;
+  const dLat = (b[0]-a[0])*toR, dLon = (b[1]-a[1])*toR;
+  const s = Math.sin(dLat/2)**2 + Math.cos(a[0]*toR)*Math.cos(b[0]*toR)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+function plural(n, one, few, many){
+  const a = Math.abs(n)%100, b = a%10;
+  if (a>10 && a<20) return many; if (b>1 && b<5) return few; if (b===1) return one; return many;
+}
+let toastT;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('on'), 2600); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------- norm ----------
+   Ориентир: взрослой собаке среднего размера обычно советуют 60–90 минут активности в день,
+   пожилой (примерно с 8–10 лет) — короче и спокойнее, около 30–60 минут, разбитых на 2–3 прогулки.
+   При лишнем весе ветеринары обычно советуют постепенно идти к верхней границе этого диапазона,
+   без бега и рывков. Темп пожилой собаки с обнюхиванием — примерно 3 км/ч. */
+function norm(){
+  const s = data.settings;
+  const age = +s.age || 0, w = +s.weight || 15;
+  let minMin, maxMin, pace;
+  if (age >= 10)      { minMin = 40; maxMin = 70; pace = 3.0; }
+  else if (age >= 7)  { minMin = 50; maxMin = 80; pace = 3.5; }
+  else if (age >= 1)  { minMin = 60; maxMin = 100; pace = 4.0; }
+  else                { minMin = 30; maxMin = 60; pace = 3.0; }
+  if (w < 8)  { minMin -= 10; maxMin -= 15; pace -= 0.5; }
+  if (w > 30) { maxMin -= 10; }
+  let goalMin = s.overweight ? Math.round(maxMin - 10) : Math.round((minMin+maxMin)/2);
+  const lowKm = +(minMin/60*pace).toFixed(1);
+  const highKm = +(maxMin/60*pace).toFixed(1);
+  let goalKm = +(goalMin/60*pace).toFixed(1);
+  const custom = s.goalKm && +s.goalKm > 0;
+  if (custom) goalKm = +(+s.goalKm).toFixed(1);
+  return {minMin, maxMin, pace, goalMin, lowKm, highKm, goalKm, custom};
+}
+
+/* ---------- views ---------- */
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-'+b.dataset.v));
+  window.scrollTo(0,0);
+  if (b.dataset.v === 'hist') renderHistory();
+}));
+
+function renderHeader(){
+  const s = data.settings;
+  $('hdrTitle').textContent = s.name ? `Прогулки: ${s.name}` : 'Прогулки';
+  $('hdrSub').textContent = `${fmt1(+s.weight)} кг · ${s.age} ${plural(Math.round(s.age),'год','года','лет')}${s.overweight ? ' · лишний вес' : ''}`;
+}
+
+function walksOn(key){ return data.walks.filter(w => dayKey(w.start) === key); }
+
+function renderToday(){
+  const list = walksOn(dayKey(Date.now()));
+  const m = list.reduce((a,w)=>a+w.distM,0);
+  const s = list.reduce((a,w)=>a+w.durSec,0);
+  const f = list.reduce((a,w)=>a+(+w.floors||0),0);
+  $('tDist').innerHTML = `${fmtKm(m)}<small>км</small>`;
+  $('tTime').innerHTML = `${Math.round(s/60)}<small>мин</small>`;
+  $('tSpeed').innerHTML = `${s>60 ? fmt1(speedKmh(m,s)) : '–'}<small>км/ч</small>`;
+  $('tFloors').innerHTML = `${f}<small>эт.</small>`;
+  const n = Math.max(2, list.length);
+  $('tDots').innerHTML = Array.from({length:n}, (_,i) => `<span class="${i<list.length?'on':''}"></span>`).join('');
+  renderNorm(m/1000, s);
+}
+
+function renderNorm(km, sec){
+  const n = norm();
+  const max = Math.max(n.highKm*1.35, km*1.08, n.goalKm*1.3);
+  const pct = v => Math.min(100, v/max*100);
+  $('nScale').innerHTML =
+    `<div class="z z-low" style="width:${pct(n.lowKm)}%"></div>`+
+    `<div class="z z-ok" style="width:${pct(n.highKm)-pct(n.lowKm)}%"></div>`+
+    `<div class="z z-high" style="flex:1"></div>`;
+  const mk = $('nMarker');
+  mk.style.left = `clamp(24px, ${pct(km)}%, calc(100% - 24px))`;
+  mk.textContent = `${fmt1(km)} км`;
+  $('nLabels').innerHTML = `<span>0</span><span>норма ${fmt1(n.lowKm)}–${fmt1(n.highKm)} км · цель ${fmt1(n.goalKm)} км</span>`;
+  let v;
+  if (km < n.lowKm*0.5) v = `До цели ещё ${fmt1(Math.max(0,n.goalKm-km))} км, примерно ${Math.round(Math.max(0,n.goalKm-km)/n.pace*60)} мин спокойным шагом.`;
+  else if (km < n.lowKm) v = `Уже неплохо. До нижней границы нормы ${fmt1(n.lowKm-km)} км.`;
+  else if (km < n.goalKm) v = `В норме. До цели ${fmt1(n.goalKm-km)} км.`;
+  else if (km <= n.highKm) v = `Цель на сегодня выполнена!`;
+  else v = `Больше обычной нормы. Для пожилой собаки это нормально иногда, но следите, чтобы он не уставал.`;
+  $('nVerdict').textContent = v;
+  $('nExplain').textContent = n.custom
+    ? `Цель ${fmt1(n.goalKm)} км задана вручную в разделе «Собака».`
+    : `Для ${data.settings.age}-летней собаки ${fmt1(+data.settings.weight)} кг${data.settings.overweight?' с лишним весом':''}: около ${n.minMin}–${n.maxMin} минут спокойной ходьбы в день. Это ориентир, а не совет ветеринара.`;
+}
+
+function renderChart(){
+  const n = norm();
+  const days = [];
+  for (let i = 6; i >= 0; i--){
+    const t = Date.now() - i*864e5;
+    const k = dayKey(t);
+    const list = walksOn(k);
+    days.push({k, t, km: list.reduce((a,w)=>a+w.distM,0)/1000, floors: list.reduce((a,w)=>a+(+w.floors||0),0), today: i===0});
+  }
+  const max = Math.max(n.goalKm*1.25, ...days.map(d=>d.km)) || 1;
+  const h = 100; // % of available for bars (minus labels)
+  $('chart').innerHTML = days.map(d => {
+    const wd = new Date(d.t).toLocaleDateString('ru-RU',{weekday:'short'});
+    return `<div class="bar${d.today?' today':''}"><em>${d.km?fmt1(d.km):''}</em><i style="height:${Math.max(2, d.km/max*82)}%"></i><b>${wd}</b></div>`;
+  }).join('') + `<div class="goal-line" style="bottom:calc(${n.goalKm/max*82}% * 1 + 20px)"><span>цель ${fmt1(n.goalKm)}</span></div>`;
+  const tot = days.reduce((a,d)=>a+d.km,0), fl = days.reduce((a,d)=>a+d.floors,0);
+  const okDays = days.filter(d=>d.km>=n.lowKm).length;
+  $('weekSum').textContent = `За неделю: ${fmt1(tot)} км, ${fl} ${plural(fl,'этаж','этажа','этажей')} наверх. В норме ${okDays} из 7 дней.`;
+}
+
+function routeSvg(pts){
+  if (!pts || pts.length < 2) return '';
+  const lat0 = pts[0][0]*Math.PI/180;
+  const xy = pts.map(p => [p[1]*Math.cos(lat0)*111320, -p[0]*110540]);
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  xy.forEach(([x,y])=>{minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);});
+  const W=300,H=160,pad=12;
+  const sc = Math.min((W-2*pad)/Math.max(maxX-minX,1),(H-2*pad)/Math.max(maxY-minY,1));
+  const ox = (W-(maxX-minX)*sc)/2, oy = (H-(maxY-minY)*sc)/2;
+  const P = xy.map(([x,y]) => [((x-minX)*sc+ox).toFixed(1), ((y-minY)*sc+oy).toFixed(1)]);
+  const d = 'M'+P.map(p=>p.join(',')).join('L');
+  const s = P[0], e = P[P.length-1];
+  return `<svg class="route" viewBox="0 0 ${W} ${H}" aria-label="Маршрут"><path d="${d}" fill="none" stroke="var(--swamp-700)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${s[0]}" cy="${s[1]}" r="6" fill="var(--swamp-500)"/><circle cx="${e[0]}" cy="${e[1]}" r="6" fill="var(--pink-500)"/></svg>`;
+}
+
+const openRoutes = new Set();
+function renderHistory(){
+  const box = $('histList');
+  if (!data.walks.length){ box.innerHTML = `<div class="empty">Пока нет прогулок.<br>Нажмите «Начать прогулку» на первом экране.</div>`; return; }
+  const sorted = [...data.walks].sort((a,b)=>b.start-a.start);
+  let html = '', last = '';
+  for (const w of sorted){
+    const k = dayKey(w.start);
+    if (k !== last){
+      const list = walksOn(k);
+      const km = list.reduce((a,x)=>a+x.distM,0)/1000;
+      html += `<div class="day-h">${esc(dayTitle(w.start))} · ${fmt1(km)} км</div>`;
+      last = k;
+    }
+    const sp = w.durSec > 60 ? fmt1(speedKmh(w.distM, w.durSec)) + ' км/ч' : '–';
+    const hasRoute = w.pts && w.pts.length > 1;
+    html += `<div class="walk" data-id="${w.id}">
+      <div class="top"><span class="when">${timeHM(w.start)}–${timeHM(w.start + w.durSec*1000)}</span><span><b>${distText(w.distM)}</b></span></div>
+      <div class="meta">${durWords(w.durSec)} · ${sp}${w.manual?' · добавлено вручную':''}</div>
+      <div class="acts">
+        <span class="stepper"><button data-act="f-" aria-label="Меньше этажей">−</button><span>${w.floors} эт.</span><button data-act="f+" aria-label="Больше этажей">+</button></span>
+        ${hasRoute?`<button class="btn btn-sm btn-ghost" data-act="route">${openRoutes.has(w.id)?'Скрыть маршрут':'Маршрут'}</button>`:''}
+        <button class="btn btn-sm btn-danger" data-act="del">Удалить</button>
+      </div>
+      ${hasRoute && openRoutes.has(w.id) ? routeSvg(w.pts) : ''}
+    </div>`;
+  }
+  box.innerHTML = html;
+}
+$('histList').addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const id = b.closest('.walk').dataset.id;
+  const w = data.walks.find(x => x.id === id); if (!w) return;
+  const act = b.dataset.act;
+  if (act === 'f-'){ w.floors = Math.max(0, (+w.floors||0) - 1); save(); renderAll(); }
+  else if (act === 'f+'){ w.floors = Math.min(99, (+w.floors||0) + 1); save(); renderAll(); }
+  else if (act === 'route'){ openRoutes.has(id) ? openRoutes.delete(id) : openRoutes.add(id); renderHistory(); }
+  else if (act === 'del'){
+    ask(`Удалить прогулку ${timeHM(w.start)}, ${distText(w.distM)}?`).then(ok => {
+      if (!ok) return;
+      data.walks = data.walks.filter(x => x.id !== id); save(); renderAll(); toast('Прогулка удалена');
+    });
+  }
+});
+
+function ask(text){
+  return new Promise(res => {
+    const d = $('dlgConfirm'); $('cText').textContent = text;
+    const done = v => { d.close(); $('cYes').onclick = $('cNo').onclick = null; res(v); };
+    $('cYes').onclick = () => done(true); $('cNo').onclick = () => done(false);
+    d.showModal();
+  });
+}
+
+function renderAll(){ renderHeader(); renderToday(); renderChart(); if ($('v-hist').classList.contains('on')) renderHistory(); }
+
+/* ---------- tracking ---------- */
+let active = null, watchId = null, tick = null, wakeLock = null;
+
+async function requestWake(){
+  if (!('wakeLock' in navigator)) { $('wakeText').textContent = 'не гасите экран'; return; }
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    $('wakeText').textContent = 'экран не погаснет';
+    wakeLock.addEventListener('release', () => { if (active) $('wakeText').textContent = 'не гасите экран'; });
+  } catch(e){ $('wakeText').textContent = 'не гасите экран'; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && active){ requestWake(); updateLive(); }
+});
+
+function setGps(state, text){
+  $('gpsDot').className = 'dot ' + state;
+  $('gpsText').textContent = text;
+}
+
+function onPos(p){
+  if (!active) return;
+  const c = p.coords, t = p.timestamp || Date.now();
+  const acc = c.accuracy || 999;
+  if (acc <= 20) setGps('ok', `GPS ±${Math.round(acc)} м`);
+  else if (acc <= 40) setGps('weak', `GPS ±${Math.round(acc)} м`);
+  else { setGps('bad', `слабый GPS ±${Math.round(acc)} м`); return; }
+  const pt = [+c.latitude.toFixed(6), +c.longitude.toFixed(6), t, Math.round(acc)];
+  const last = active.pts[active.pts.length - 1];
+  if (!last){ active.pts.push(pt); saveActive(active); return; }
+  const d = haversine(last, pt);
+  const dt = Math.max(0.5, (t - last[2]) / 1000);
+  // шум GPS: пропускаем маленькие сдвиги, сравнимые с погрешностью
+  const minStep = Math.max(4, Math.min(acc, last[3]) * 0.6);
+  if (d < minStep) return;
+  // нереальный скачок (больше ~22 км/ч) — пропускаем
+  if (d / dt > 6) return;
+  active.distM += d;
+  active.pts.push(pt);
+  saveActive(active);
+  updateLive();
+}
+function onPosErr(err){
+  if (err.code === 1) setGps('bad', 'нет доступа к геопозиции');
+  else setGps('bad', 'GPS не отвечает');
+  if (err.code === 1) toast('Разрешите геопозицию: Настройки → Конфиденциальность → Службы геолокации → Safari');
+}
+
+function startWatch(){
+  if (!('geolocation' in navigator)) { setGps('bad','GPS недоступен'); return; }
+  watchId = navigator.geolocation.watchPosition(onPos, onPosErr, {enableHighAccuracy:true, maximumAge:0, timeout:30000});
+}
+
+function updateLive(){
+  if (!active) return;
+  const sec = (Date.now() - active.start) / 1000;
+  $('liveTime').textContent = dur(sec);
+  $('liveDist').innerHTML = distHuman(active.distM);
+  $('liveSpeed').innerHTML = `${sec > 30 ? fmt1(speedKmh(active.distM, sec)) : '0'}<small>км/ч</small>`;
+}
+
+function beginUI(){
+  document.body.classList.add('walking');
+  setGps('', 'Ищу GPS…');
+  startWatch();
+  requestWake();
+  updateLive();
+  tick = setInterval(updateLive, 1000);
+}
+function endUI(){
+  document.body.classList.remove('walking');
+  if (watchId != null) navigator.geolocation.clearWatch(watchId);
+  watchId = null; clearInterval(tick); tick = null;
+  if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock = null; }
+}
+
+$('btnStart').addEventListener('click', () => {
+  active = {start: Date.now(), distM: 0, pts: []};
+  saveActive(active);
+  beginUI();
+});
+
+function simplify(pts){
+  // оставляем не больше ~400 точек для истории
+  const step = Math.max(1, Math.ceil(pts.length / 400));
+  const out = pts.filter((_,i) => i % step === 0).map(p => [p[0], p[1]]);
+  const l = pts[pts.length-1];
+  if (l && (out.length === 0 || out[out.length-1][0] !== l[0] || out[out.length-1][1] !== l[1])) out.push([l[0], l[1]]);
+  return out;
+}
+
+$('btnStop').addEventListener('click', () => {
+  if (!active) return;
+  const durSec = Math.round((Date.now() - active.start)/1000);
+  const w = {
+    id: 'w' + active.start.toString(36) + Math.random().toString(36).slice(2,6),
+    start: active.start, durSec, distM: Math.round(active.distM),
+    floors: +data.settings.floors || 0,
+    pts: simplify(active.pts)
+  };
+  data.walks.push(w); save();
+  active = null; saveActive(null); endUI(); renderAll();
+  toast(`Сохранено: ${distText(w.distM)} за ${durWords(w.durSec)}`);
+});
+$('btnCancel').addEventListener('click', () => {
+  ask('Отменить прогулку и ничего не сохранять?').then(ok => {
+    if (!ok) return;
+    active = null; saveActive(null); endUI(); renderAll();
+  });
+});
+
+/* ---------- manual add ---------- */
+$('btnAdd').addEventListener('click', () => {
+  const now = new Date();
+  $('aDate').value = dayKey(now);
+  $('aTime').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  $('aMin').value = ''; $('aKm').value = ''; $('aFloors').value = data.settings.floors;
+  $('dlgAdd').showModal();
+});
+$('dlgAdd').addEventListener('close', () => {
+  if ($('dlgAdd').returnValue !== 'ok') return;
+  const [Y,M,D] = $('aDate').value.split('-').map(Number);
+  const [h,mi] = $('aTime').value.split(':').map(Number);
+  const start = new Date(Y, M-1, D, h, mi).getTime();
+  const min = +$('aMin').value, km = +String($('aKm').value).replace(',','.');
+  if (!start || !min) return;
+  data.walks.push({id:'m'+Date.now().toString(36), start, durSec: Math.round(min*60), distM: Math.round(km*1000), floors: Math.max(0, +$('aFloors').value||0), pts: [], manual: true});
+  save(); renderAll(); renderHistory(); toast('Прогулка добавлена');
+});
+
+/* ---------- settings ---------- */
+function fillSettings(){
+  const s = data.settings;
+  $('sName').value = s.name; $('sWeight').value = s.weight; $('sAge').value = s.age;
+  $('sOver').checked = !!s.overweight; $('sFloors').value = s.floors; $('sGoal').value = s.goalKm || '';
+  const n = norm();
+  $('normInfo').innerHTML =
+    `<p style="margin-top:0">Пожилым собакам (примерно с 8–10 лет) обычно советуют не одну длинную, а 2–3 спокойные прогулки в день, всего около <b>${n.minMin}–${n.maxMin} минут</b>. При лишнем весе полезно постепенно подходить к верхней границе, но без бега и рывков.</p>`+
+    `<p>Спокойный темп пожилой собаки с обнюхиванием около <b>${fmt1(n.pace)} км/ч</b>. Отсюда норма <b>${fmt1(n.lowKm)}–${fmt1(n.highKm)} км в день</b>, цель <b>${fmt1(n.goalKm)} км</b>${n.custom?' (задана вами)':''}.</p>`+
+    `<p style="margin-bottom:0">Этажи по лестнице — хорошая нагрузка для мышц, но тяжёлая для суставов пожилой собаки. Если он начал медленнее подниматься или останавливаться, это повод показать его врачу.</p>`;
+}
+$('btnSave').addEventListener('click', () => {
+  const s = data.settings;
+  s.name = $('sName').value.trim().slice(0,40);
+  const w = parseFloat(String($('sWeight').value).replace(',','.')); if (w > 0) s.weight = w;
+  const a = parseFloat(String($('sAge').value).replace(',','.')); if (a >= 0) s.age = a;
+  s.overweight = $('sOver').checked;
+  const f = parseInt($('sFloors').value, 10); if (f >= 0) s.floors = f;
+  const g = parseFloat(String($('sGoal').value).replace(',','.')); s.goalKm = g > 0 ? g : null;
+  save(); fillSettings(); renderAll(); toast('Сохранено');
+});
+
+/* ---------- backup ---------- */
+$('btnExport').addEventListener('click', async () => {
+  const json = JSON.stringify(data);
+  const name = `progulki-${dayKey(Date.now())}.json`;
+  const file = new File([json], name, {type:'application/json'});
+  if (navigator.canShare && navigator.canShare({files:[file]})) {
+    try { await navigator.share({files:[file], title:'Копия прогулок'}); return; } catch(e){ if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+});
+$('fileImport').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (!d || !Array.isArray(d.walks)) throw 0;
+    const ok = await ask(`Загрузить копию (${d.walks.length} ${plural(d.walks.length,'прогулка','прогулки','прогулок')})? Новые прогулки добавятся к текущим.`);
+    if (!ok) return;
+    const have = new Set(data.walks.map(w=>w.id));
+    d.walks.forEach(w => { if (w && w.id && !have.has(w.id) && typeof w.start === 'number') data.walks.push(w); });
+    if (d.settings) data.settings = Object.assign(data.settings, d.settings);
+    save(); fillSettings(); renderAll(); toast('Копия загружена');
+  } catch(err){ toast('Это не похоже на файл копии прогулок'); }
+  e.target.value = '';
+});
+
+/* ---------- boot ---------- */
+fillSettings(); renderAll();
+const saved = loadActive();
+if (saved && saved.start && Date.now() - saved.start < 6*3600e3) { active = saved; beginUI(); toast('Продолжаю незаконченную прогулку'); }
+else if (saved) saveActive(null);
+setInterval(() => { if (!active) renderToday(); }, 60000);
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+})();
+</script>
+</body>
+</html>
